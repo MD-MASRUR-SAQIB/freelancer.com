@@ -1,0 +1,5 @@
+Download & Install Arduino IDE from https://www.arduino.cc/en/software
+Open Arduino_Infrared_project.ino from Drive link 
+https://drive.google.com/drive/folders/1LBKmz590muArrOHk2m8oeHd-UEtbafqw?usp=sharing
+
+Follow the provided screen record.

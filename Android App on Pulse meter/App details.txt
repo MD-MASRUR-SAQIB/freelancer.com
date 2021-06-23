@@ -1,0 +1,11 @@
+Color choice: Red & Blue.
+App icon: Brain symbol
+App name: IITSDNS
+1. Opeaning page will contain the App name in Red background.
+2. Home page will show 2 numerical values from Arduino. and a few buttons (Settings, Emergency calling etc)
+3. Settings page will contain 
+- Blutooth connection options
+- Emergency SMS number input
+- Pre-set value that will be compared
+- GPS on off option
+- Call on off option
