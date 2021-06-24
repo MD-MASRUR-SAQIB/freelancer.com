@@ -1,0 +1,10 @@
+1. Replace the Edited Arduino Mouse libraried to this path:
+    C:\Program Files (x86)\Arduino\libraries\Mouse\src
+2. Replace the Edited USB Host shield libraries to this path:
+    C:\Users\* YOUR USER NAME *\Documents\Arduino\libraries\USB_Host_Shield_Library_2.0
+3. Open the code "mousehid.ino" into your Arduino IDE. Upload the code.
+
+Usage:
+Normally the mouse will act like a normal gaming mouse. 
+But if you press the Middle Button (Scroll Wheel Button) for about 100-300 ms, 
+It will active recoil control mode.
