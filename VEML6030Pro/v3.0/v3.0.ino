@@ -22,9 +22,13 @@ void ring();
 void check() {
   //conditions will be here:
   //demo conditions:
-  if (sensor1 > sensor2) {
+  if (Serial.available()) {
+    while (Serial.available()) {
+      Serial.read();
+    }
     ring();
   }
+
   if (sensor3 < sensor4) {
     ring();
   }
@@ -33,8 +37,8 @@ void check() {
    Change the config below to change your esp-8266 wifi name
    and password. Or, Use the default to connect with Arduino
 */
-#define   ssid                "Greenhouse1"
-#define   password            "123456789"
+#define   ssid                "Poco F1"
+#define   password            "e1234567"
 
 
 SparkFun_Ambient_Light light(I2C_Address);
@@ -82,7 +86,6 @@ void setup() {
 void loop()
 {
   WiFiClient client = server.available();
-
   if (client) {
     String currentLine = "";
     Serial.println("New Client.");
@@ -111,7 +114,7 @@ void loop()
       }
     }
     header = "";
-    client.stop();
+    //client.stop();
     Serial.println("Client disconnected.");
     Serial.println("");
   }
@@ -119,8 +122,8 @@ void loop()
   if (millis() - prev > (dataDelay * 1000)) {
     prev = millis();
 
-    tca9546a.selectChannel(0);
-    sensor1 = light.readLight();
+    //tca9546a.selectChannel(0);
+    //sensor1 = light.readLight();
 
     Serial.print("Sensor no: ");
     Serial.print(1);
@@ -129,8 +132,8 @@ void loop()
     Serial.println(" Lux");
     delay(100);
 
-    tca9546a.selectChannel(1);
-    sensor2 = light.readLight();
+    //tca9546a.selectChannel(1);
+    //sensor2 = light.readLight();
 
     Serial.print("Sensor no: ");
     Serial.print(2);
@@ -139,8 +142,8 @@ void loop()
     Serial.println(" Lux");
     delay(100);
 
-    tca9546a.selectChannel(2);
-    sensor3 = light.readLight();
+    //tca9546a.selectChannel(2);
+    //sensor3 = light.readLight();
 
     Serial.print("Sensor no: ");
     Serial.print(3);
@@ -168,6 +171,7 @@ void ring() {
   doc["T"] = prev;
 
   output = "";
+  serializeJson(doc, Serial);
   serializeJson(doc, output);
 }
 
