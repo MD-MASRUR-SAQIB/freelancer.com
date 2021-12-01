@@ -14,19 +14,20 @@ TFLidar SeeedTFLidar(&SeeedTFLuna);
 #define STEPPER_PIN_4 21
 
 int   revolution  = 320; //degree. A complete circular rotation. You can reduce it to any value upto 360 you need.
-int   perStepTime = 15; //millisecond. As the LiDAR sensor needs atleast 10ms to get a new value.
+int   perStepTime = 12; //millisecond. As the LiDAR sensor needs atleast 10ms to get a new value.
 float infintyRange = 6; //meters. If the range is more than 6 meters, it'll consider as infinity range, case2 happens
-float minimumRange = 0.85; //If the distance is less than or equal to (0.5 * previous distance) case3 happens
-float maximumRange = 0.85; //If the distance is less than or equal to (0.5 * previous distance) case3 happens
-float rotationFactor = 3; //Increase the factor to increase the speed and decrease the steps
+float minimumRange = 0.65; //If the distance is less than or equal to (0.5 * previous distance) case3 happens
+float maximumRange = 0.5; //If the distance is less than or equal to (0.5 * previous distance) case3 happens
+float rotationFactor = 5; //Increase the factor to increase the speed and decrease the steps
 int   comFact;
+float   restofTheAngle;
 
 int   actualSteps  = 2038; //According to its gear ratio, motor needs 2038 steps to rotate 360 degree.
 int   step_number = 0, currStep = 0;
 int   stepsAcctoRev;
 bool  rotDir = false; //false means anti-clockwise first.
 
-float area1, area2, average, perStepAngle, temp, smArea, bigArea;
+float area1, area2, average, perStepAngle, temp, smArea, bigArea, firstDis;
 float prevDis, newDis, tempAngle, smBase, bigBase, smHypot, bigHypot, smHeight, bigHeight;
 
 uint64_t prevTime;
@@ -44,6 +45,8 @@ void setup() {
   pinMode(STEPPER_PIN_3, OUTPUT);
   pinMode(STEPPER_PIN_4, OUTPUT);
 
+  restofTheAngle = acos(-1)*1.0*(360 - revolution)/180;
+  
   stepsAcctoRev = (actualSteps / 360.0) * min(revolution, 360); //min function is just for safety. incase if anyone increases the revolution value more than 360
   perStepAngle  = (2.0 * acos(-1) * rotationFactor) / 2038.0;
   tempAngle     = perStepAngle;
@@ -69,12 +72,13 @@ void compRot() {
   delay(100);
   prevDis = SeeedTFLidar.get_distance() / 100.0; //in meter. Setting previous distance variable for the first time.
   smHeight = prevDis;
+  firstDis = prevDis;
   Serial.print("PrevDis = ");
   Serial.println(prevDis);
   for (currStep = 0; currStep <= stepsAcctoRev / rotationFactor; currStep++) {
     for (comFact = 0; comFact < rotationFactor; comFact++) {
       OneStep(rotDir);
-      delay(2);
+      delay(3);
     }
     while (!SeeedTFLidar.get_frame_data()) {
       delay(1);
@@ -93,27 +97,38 @@ void compRot() {
     Serial.print(" Current Area = ");
     Serial.println(area1, 8);
   }
-  if(tempAngle >= perStepAngle*2){
+  if(tempAngle >= perStepAngle*2){ //ending rotation in an obstacle
     newDis = prevDis;
     area1 += area();
   }
+  Serial.print("\nFirst Dis: ");
+  Serial.print(firstDis, 8);
+  Serial.print(" new Dis: ");
+  Serial.print(newDis, 8);
+  Serial.print(" restofTheAngle: ");
+  Serial.print(restofTheAngle, 8);
+  Serial.print(" \nRest of the Area: ");
+  Serial.println(0.5*firstDis*newDis*sin(restofTheAngle), 8);
+  area1 += (0.5*firstDis*newDis*sin(restofTheAngle)); // 
+  
   Serial.print("\n\n\nArea1 = ");
   Serial.println(area1, 8);
-  prevDis = SeeedTFLidar.get_distance() / 100.0;
-
+ 
   
-  rotDir = !rotDir;
+  rotDir = !rotDir; //Changing the direction of the motor
+  smArea = 0;
   while (!SeeedTFLidar.get_frame_data()) {
     delay(1);
   }
   delay(100);
   prevDis = SeeedTFLidar.get_distance() / 100.0; //in meter. Setting previous distance variable for the first time.
   smHeight = prevDis;
+  firstDis = prevDis;
 
-  for (currStep = 0; currStep <= stepsAcctoRev/rotationFactor; currStep++) {
+  for (currStep = 0; currStep <= stepsAcctoRev / rotationFactor; currStep++) {
     for (comFact = 0; comFact < rotationFactor; comFact++) {
       OneStep(rotDir);
-      delay(2);
+      delay(3);
     }
     while (!SeeedTFLidar.get_frame_data()) {
       delay(1);
@@ -136,6 +151,15 @@ void compRot() {
     newDis = prevDis;
     area2 += area();
   }
+  Serial.print("\nFirst Dis: ");
+  Serial.print(firstDis, 8);
+  Serial.print(" new Dis: ");
+  Serial.print(newDis, 8);
+  Serial.print(" restofTheAngle: ");
+  Serial.print(restofTheAngle, 8);
+  Serial.print(" \nRest of the Area: ");
+  Serial.println(0.5*firstDis*newDis*sin(restofTheAngle), 8);
+  area2 += (0.5*firstDis*newDis*sin(restofTheAngle));
   
   Serial.print("\n\n\nArea2 = ");
   Serial.println(area2, 8);
@@ -158,9 +182,24 @@ float area() {
     bigHeight = (smHeight * newDis * 1.0)/smHypot; //newDis is the Hypotenous of the big Triangle
     bigBase = (smBase * newDis * 1.0)/smHypot;
     bigArea = 0.5 * bigBase * bigHeight;
+    Serial.print("smBase: ");
+    Serial.println(smBase);
+    Serial.print("smHypot: ");
+    Serial.println(smHypot);
+    Serial.print("bigHeight: ");
+    Serial.println(bigHeight);
+    Serial.print("bigBase: ");
+    Serial.println(bigBase);
+    Serial.print("bigArea: ");
+    Serial.println(bigArea);
+    Serial.print("smArea: ");
+    Serial.println(smArea);
+    Serial.print("Area Difference: ");
+    Serial.println(bigArea - smArea);
+    smHeight = newDis;
     
     tempAngle = perStepAngle;
-    return bigArea - smArea;
+    return (bigArea - smArea);
   }
   if (infintyRange <= newDis) { // If the range is larger than the infinity range
     temp = 0.5 * prevDis * prevDis * sin(tempAngle); // use the previous values only
