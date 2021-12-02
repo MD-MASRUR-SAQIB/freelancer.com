@@ -1,3 +1,9 @@
+uint8_t pinTDCInrpt       = 2;
+uint8_t pinCrankInrpt     = 3;
+uint8_t pinThrottle       = A0;
+
+uint8_t cyl1Offset        = 0;
+uint8_t cyl2Offset        = 127; //180 degrees
 uint8_t crankAngle        = 0;
 uint8_t crankSubPulses    = 0;
 uint8_t crankPulses       = 0;
@@ -9,9 +15,21 @@ uint8_t cyl2StartAngle    = 0;
 uint8_t cyl2Duration      = 0;
 uint8_t cyl1Angle         = 0;
 uint8_t cyl2Angle         = 0;
+uint8_t cylXStartAngle    = 0;
+uint8_t cylXDuration      = 0;
+uint8_t flag20HzInt       = 0;
+uint16_t ADCvalue         = 0;
+
+bool cyl1Active           = false;
+bool cyl2Active           = false;
+
+const uint16_t timer1Load = 0;
+const uint16_t timer1Comp = 625;
 
 
-const uint8_t cylXStartAngle[16][16] =
+
+
+const uint8_t lookUpCylXStartPos[16][16] =
 {
   {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
   {0,  8,  7,  5,  5,  4,  4,  2,  2,  2,  1,  1,  1,  1,  1,  1},
@@ -31,7 +49,7 @@ const uint8_t cylXStartAngle[16][16] =
   {0, 28, 26, 25, 25, 23, 23, 22, 22, 22, 21, 21, 21, 21, 21, 21}
 };
 
-const uint8_t cylXDuration[16][16] =
+const uint8_t lookUpCylXDuration[16][16] =
 {
    {0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
    {0,  4,  8, 12, 16, 21, 25, 29, 33, 37, 42, 46, 50, 54, 59, 63},
@@ -52,24 +70,77 @@ const uint8_t cylXDuration[16][16] =
 };
 
 void setup() {
-  Serial.begin(115200);
-  for(int i = 0 ; i < 16 ; i++){
-    for(int j = 0; j < 16; j++){
-      Serial.print(cylXStartAngle[i][j]);
-      Serial.print("\t");
-    }
-    Serial.println();
-  }
-  Serial.println();
-  for(int i = 0 ; i < 16 ; i++){
-    for(int j = 0; j < 16; j++){
-      Serial.print(cylXDuration[i][j]);
-      Serial.print("\t");
-    }
-    Serial.println();
-  }
+  attachInterrupt(digitalPinToInterrupt(pinTDCInrpt), TDCInterrupt, FALLING);
+  attachInterrupt(digitalPinToInterrupt(pinCrankInrpt), crankAngleInterrupt, CHANGE);
+
+  TCCR1A  = 0;
+  TCCR1B |=  (1 << CS12);
+  TCCR1B &= ~(1 << CS11);
+  TCCR1B &= ~(1 << CS10);
+  TCNT1 = timer1Load;
+  OCR1A = timer1Comp;
+  TIMSK1 = (1 << OCIE1A);
+  sei();
 }
 
 void loop() {
 
+}
+
+ISR(TIMER1_COMPA_vect){ // 100hzInterrupt
+  TCNT1 = timer1Load;
+  
+  ADCvalue = analogRead(pinThrottle);
+  throttlePosition = ADCvalue >> 2;
+
+  cylXStartAngle = lookUpCylXStartPos[crankVelocity >> 4][throttlePosition >> 4];
+  cylXDuration   = lookUpCylXDuration[crankVelocity >> 4][throttlePosition >> 4];
+
+  cyl1StartAngle = cylXStartAngle + cyl1Offset;
+  cyl2StartAngle = cylXStartAngle + cyl2Offset;
+  
+  cyl1Duration = cylXDuration;
+  cyl2Duration = cylXDuration;
+
+  flag20HzInt++;
+
+  if(flag20HzInt >= 5){
+    interrupt20Hz();
+    flag20HzInt = 0;
+  }
+}
+
+void interrupt20Hz(){
+  crankVelocity = crankPulses;
+  crankSubPulses = 255;
+  crankPulses = 255;
+}
+
+void crankAngleInterrupt(){
+  crankAngle++;
+  crankSubPulses++;
+  if(crankSubPulses % 8){
+    cyl1Angle = crankAngle - cyl1StartAngle;
+    if(cyl1Angle > cyl1Duration){
+      cyl1Active = false;
+    }
+    else{
+      cyl1Active = true;
+    }
+
+    cyl2Angle = crankAngle - cyl2StartAngle;
+    if(cyl2Angle > cyl2Duration){
+      cyl2Active = false;
+    }
+    else{
+      cyl2Active = true;
+    }
+  }
+  else{
+    crankPulses++;
+  }
+}
+
+void TDCInterrupt(){
+  crankAngle = 255;
 }
