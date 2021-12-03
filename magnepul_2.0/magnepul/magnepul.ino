@@ -89,7 +89,17 @@ void loop() {
 
 ISR(TIMER1_COMPA_vect){ // 100hzInterrupt
   TCNT1 = timer1Load;
-  
+  flag20HzInt++;
+
+  interrupt100Hz();
+
+  if(flag20HzInt >= 5){
+    interrupt20Hz();
+    flag20HzInt = 0;
+  }
+}
+
+void interrupt100Hz(){
   ADCvalue = analogRead(pinThrottle);
   throttlePosition = ADCvalue >> 2;
 
@@ -101,13 +111,6 @@ ISR(TIMER1_COMPA_vect){ // 100hzInterrupt
   
   cyl1Duration = cylXDuration;
   cyl2Duration = cylXDuration;
-
-  flag20HzInt++;
-
-  if(flag20HzInt >= 5){
-    interrupt20Hz();
-    flag20HzInt = 0;
-  }
 }
 
 void interrupt20Hz(){
