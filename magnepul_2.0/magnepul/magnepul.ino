@@ -1,6 +1,8 @@
 uint8_t pinTDCInrpt       = 2;
 uint8_t pinCrankInrpt     = 3;
 uint8_t pinThrottle       = A0;
+uint8_t pinSSR1           = 9;
+uint8_t pinSSR2           = 10;
 
 uint8_t cyl1Offset        = 0;
 uint8_t cyl2Offset        = 127; //180 degrees
@@ -70,6 +72,9 @@ const uint8_t lookUpCylXDuration[16][16] =
 };
 
 void setup() {
+  pinMode(pinSSR1, OUTPUT);
+  pinMode(pinSSR2, OUTPUT);
+  
   attachInterrupt(digitalPinToInterrupt(pinTDCInrpt), TDCInterrupt, FALLING);
   attachInterrupt(digitalPinToInterrupt(pinCrankInrpt), crankAngleInterrupt, CHANGE);
 
@@ -126,17 +131,21 @@ void crankAngleInterrupt(){
     cyl1Angle = crankAngle - cyl1StartAngle;
     if(cyl1Angle > cyl1Duration){
       cyl1Active = false;
+      digitalWrite(pinSSR1, LOW);
     }
     else{
       cyl1Active = true;
+      digitalWrite(pinSSR1, HIGH);
     }
 
     cyl2Angle = crankAngle - cyl2StartAngle;
     if(cyl2Angle > cyl2Duration){
       cyl2Active = false;
+      digitalWrite(pinSSR2, LOW);
     }
     else{
       cyl2Active = true;
+      digitalWrite(pinSSR2, HIGH);
     }
   }
   else{
